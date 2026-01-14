@@ -70,13 +70,16 @@ const handleSearch = async () => {
     return;
   }
 
+  // Sync manufacturer filter with store before search
+  dealerStore.selectedManufacturer = selectedManufacturer.value as any;
+
   // Check if it's a postal code (numbers only) or place name
   if (/^\d+$/.test(searchInput.value.trim())) {
     const postalCode = searchInput.value.trim();
     await dealerStore.searchByPostalCode(postalCode);
     
-    // If no results found and it's a postal code, automatically scrape
-    if (dealerStore.filteredDealers.length === 0) {
+    // If no results found (check raw dealers, not filtered), automatically scrape
+    if (dealerStore.dealers.length === 0) {
       scrapeResult.value = "No dealers found in database. Scraping from manufacturer websites...";
       scraping.value = true;
       
@@ -87,8 +90,10 @@ const handleSearch = async () => {
           true // Save to database
         );
         
+        // After scraping, search again to get the newly saved dealers
+        await dealerStore.searchByPostalCode(postalCode);
+        
         scrapeResult.value = `Found and saved ${dealers.length} dealers from manufacturer websites!`;
-        // Results are already loaded in the store
       } catch (error: any) {
         scrapeResult.value = `Scraping failed: ${error.message || "Unknown error"}`;
         console.error("Auto-scraping error:", error);
